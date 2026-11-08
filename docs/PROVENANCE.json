@@ -1,0 +1,87 @@
+[
+  {
+    "source": "4 - Poster Final\\poster_FINAL_Simposio_2026.pdf",
+    "destination": "poster/Poster_Chicago_SIE_2026.pdf",
+    "sha256": "33d867611448aee33fe9c343a6cc0faba432d381da071178c2c739b2a58f9fc7"
+  },
+  {
+    "source": "2 - guide_docs\\2.3 - informe_final\\2.3.1 - pdf_files\\informe_final_proyecto_Simposio.pdf",
+    "destination": "docs/Informe_Chicago.pdf",
+    "sha256": "258d0387e3079f8b93cac056cfc8b8942563c7fbf69c8126015246f8d138ca5d"
+  },
+  {
+    "source": "2 - guide_docs\\2.3 - informe_final\\2.3.2 - .tex_&_build_files\\monografia_completa.tex",
+    "destination": "docs/latex/monografia_completa.tex",
+    "sha256": "78cf847c076497f67add245c680d7e9d21bb849bbcc880d5896835cd3e1c7d39"
+  },
+  {
+    "source": "3 - stan_models\\poisson_offset.stan",
+    "destination": "stan_models/poisson_offset.stan",
+    "sha256": "703872645009aeb552706d2cecafcb3eb250c86e54005da97d420c0957587fde"
+  },
+  {
+    "source": "3 - stan_models\\neg_binomial_offset.stan",
+    "destination": "stan_models/neg_binomial_offset.stan",
+    "sha256": "40b715cff69b0e6cac6991ba9827422eb7cbbc81dcfc8fdd5ebaa93c73f8fa49"
+  },
+  {
+    "source": "0 - Data\\0.2 - final_data\\final_data.csv",
+    "destination": "data/processed/final_data.csv",
+    "sha256": "0a05c09d4c561081f8d2f12b3e6f327c46cc8163b9b4b6ad2a2e606b8a93d31f"
+  },
+  {
+    "source": "0 - Data\\0.2 - final_data\\final_data_2.0.csv",
+    "destination": "data/processed/final_data_2.0.csv",
+    "sha256": "d319952ea0485a0dae88ddc799fb8b537e904a9665b9fee086fb0db700ed500c"
+  },
+  {
+    "source": "0 - Data\\0.1 - raw_data\\Census_Data_-_Selected_socioeconomic_indicators_in_Chicago,_2008_–_2012_20260329.csv",
+    "destination": "data/raw/Census_Data_-_Selected_socioeconomic_indicators_in_Chicago,_2008_–_2012_20260329.csv",
+    "sha256": "749d7a3dd842281269ab3015d325275bfe9c27e67ffc71f046c448d002ad5927"
+  },
+  {
+    "source": "0 - Data\\0.1 - raw_data\\ACS_5_Year_Data_by_Community_Area_20260330.csv",
+    "destination": "data/raw/ACS_5_Year_Data_by_Community_Area_20260330.csv",
+    "sha256": "4cfe0de847234709f7b67ed9dcd773471af4ad7d16a4fc0a48e87778769965ed"
+  },
+  {
+    "source": "1 - notebooks\\1.2 - imágenes listas para el poster\\15 - formal_model_comparison__plot.png",
+    "destination": "results/figures/15_loo_comparison.png",
+    "sha256": "72d6f734779c785c7696076ab86bc558913402567c4fa03ef13d493d80824b54"
+  },
+  {
+    "source": "1 - notebooks\\1.2 - imágenes listas para el poster\\19 - phase6_comparison_metrics__&__predicted_vs_observed.png",
+    "destination": "results/figures/19_ml_comparison.png",
+    "sha256": "9a3cb16cbb929c4fff929f5aa9ed438cd59a572f558bfea1fba24aee1c443e20"
+  },
+  {
+    "source": "1 - notebooks\\1.2 - imágenes listas para el poster\\2 - matriz_correlacion_minimalista__Chicago_crime.png",
+    "destination": "results/figures/02_correlation.png",
+    "sha256": "d698709e74dbeefcf730d45151d8a523904853ffe993ff63fc3e4262af0c2ce4"
+  },
+  {
+    "source": "1 - notebooks\\1.2 - imágenes listas para el poster\\20 - phase7_counterfactual_scenarios.png",
+    "destination": "results/figures/20_scenario_from_fit.png",
+    "sha256": "0fbaba625036562dd350c7264ce194e061c9ba448017b0c47b6a29ba3a90b40e"
+  },
+  {
+    "source": "1 - notebooks\\1.2 - imágenes listas para el poster\\3 - VIF_table.png",
+    "destination": "results/figures/03_vif.png",
+    "sha256": "ec82208337b5f6d484a49c6bc82e1e7e3f90d6f13c3ffa90b2df525f1e737963"
+  },
+  {
+    "source": "1 - notebooks\\1.2 - imágenes listas para el poster\\4 - total_crimes_distribution__and__total_crimes_vs_population.png",
+    "destination": "results/figures/04_counts_population.png",
+    "sha256": "ee22af1d29b6488c84e719bbdcdf393801611c99da8b1ba794559d6c6c117119"
+  },
+  {
+    "source": "1 - notebooks\\1.2 - imágenes listas para el poster\\5 - PPC_M1.png",
+    "destination": "results/figures/05_ppc_poisson.png",
+    "sha256": "8facb86dc56d671a5d100c7756e311a14cd3f4b8bc3e9bd6e02bd8a246f8f4df"
+  },
+  {
+    "source": "1 - notebooks\\1.2 - imágenes listas para el poster\\9 - PPC_M5.png",
+    "destination": "results/figures/09_ppc_negative_binomial.png",
+    "sha256": "ec50eebedbe5d50e6f5fab32f98579a328ca37168cfa5cea3386875264e681d6"
+  }
+]

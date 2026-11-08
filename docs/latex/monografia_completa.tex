@@ -1,0 +1,354 @@
+\documentclass[11pt,a4paper]{article}
+
+% --- Paquetes de Configuración General ---
+\usepackage[utf8]{inputenc}
+\usepackage[spanish,es-tabla]{babel}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{microtype}
+\usepackage{caption}
+
+% --- Configuración de Página ---
+\geometry{top=2.5cm, bottom=2.5cm, left=3cm, right=3cm}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    citecolor=blue,
+    urlcolor=teal
+}
+
+% --- Título del Documento ---
+\title{\textbf{Monografía Analítica Consolidada: \\ Modelamiento Bayesiano de la Criminalidad mediante Procesos de Conteo con Offset Demográfico y su Contraste Predictivo en la Infraestructura Urbana de Chicago}}
+\author{\textbf{Bamsi Mendez Posada} \\ Universidad Nacional de Colombia, sede Manizales}
+\date{11 de julio de 2026}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Este informe técnico exhaustivo formaliza el ciclo analítico, la infraestructura computacional, la validación predictiva y la justificación epistemológica del ecosistema de modelos bayesianos diseñado para el estudio de los patrones delictivos en las 77 áreas comunitarias de Chicago, preparado para el XXXV Simposio Internacional de Estadística. A través de un enfoque iterativo y reproducible, se evalúan cinco especificaciones teóricas fundadas en distribuciones de Poisson y Binomial Negativa ajustadas mediante algoritmos de Monte Carlo por Cadenas de Markov (MCMC) del tipo HMC/NUTS. El Modelo $M_5$ (Binomial Negativa multivariado estandarizado) se consolida como el estimador óptimo global tras corregir la severa sobredispersión residual de los datos y superar los criterios de control de la teoría de la información ($\text{elpd}_{loo}$ y $\text{elpd}_{waic}$). Finalmente, la estructura formal paramétrica se contrasta frente a una línea base supervisada de Machine Learning (\textit{Ridge}, \textit{Random Forest} y \textit{Gradient Boosting}) y se implementa una simulación contrafáctica cuantitativa orientada a la toma de decisiones en políticas públicas de mitigación socioeconómica.
+\end{abstract}
+
+\newpage
+\tableofcontents
+\newpage
+
+% ==============================================================================
+\section{Resumen Ejecutivo}
+% ==============================================================================
+El presente proyecto documenta una transición metodológica madura que va desde la exploración empírica descriptiva hasta la consolidación de un entorno de inferencia probabilística avanzada. La investigación aborda las disparidades críticas en los volúmenes de delincuencia urbana en la ciudad de Chicago recurriendo a la modelación estadística robusta. Mediante el uso complementario de diagnósticos econométricos tradicionales y algoritmos de vanguardia bayesiana, el flujo de trabajo implementado garantiza la consistencia teórica y la robustez analítica en cada uno de sus componentes:
+
+\begin{itemize}
+    \item \textbf{Auditoría de Colinealidad y Estructuración Funcional:} Aislamiento de redundancias macroeconómicas mediante la estimación del Factor de Inflación de la Varianza (VIF), derivando en la exclusión controlada del \textit{Hardship Index}.
+    \item \textbf{Inferencia Computacional en Entornos Distribuidos:} Implementación de código probabilístico nativo en Stan compilado a través de \texttt{cmdstanpy}, superando las restricciones locales mediante configuraciones remotas híbridas en Google Colab y extensiones locales en VS Code.
+    \item \textbf{Validación de Convergencia Estricta:} Verificación formal de la geometría de la distribución posterior mediante el monitoreo de indicadores de reducción potencial ($\hat{R} < 1.01$), diagnósticos de tamaño efectivo de muestra (\textit{Bulk-ESS} y \textit{Tail-ESS} $> 400$) y la completa ausencia de transiciones divergentes.
+    \item \textbf{Teoría de la Información Aplicada:} Selección de la arquitectura probabilística óptima por medio del análisis comparativo de densidades predictivas logarítmicas esperadas (\textit{PSIS-LOO} y \textit{WAIC}) asistido por diagnósticos de estabilidad de densidades de Pareto ($\hat{k}$).
+    \item \textbf{Contraste Dual Epistemológico:} Evaluación comparativa \textit{out-of-sample} del modelo paramétrico bayesiano frente a algoritmos no paramétricos y de regularización clásica de Machine Learning, identificando los compromisos conceptuales existentes entre la precisión analítica puntual y la propagación honesta de la incertidumbre.
+    \item \textbf{Simulación de Escenarios Aplicada:} Generación de un motor contrafáctico derivado de las muestras empíricas de la posterior para proyectar la efectividad de políticas públicas enfocadas en el mercado laboral de vecindarios críticos.
+\end{itemize}
+
+% ==============================================================================
+\section{Contexto del Problema y Estructuración Teórica}
+% ==============================================================================
+La distribución geográfica de la criminalidad urbana plantea un desafío metodológico fundamental: los conteos absolutos de delitos tienden a ser proporcionalmente más altos en áreas con altas concentraciones demográficas. Evaluar el riesgo intrínseco de una comunidad basándose exclusivamente en totales brutos introduce un sesgo de escala insostenible que invalida cualquier conclusión de política pública.
+
+Para corregir esta distorsión, esta investigación adopta el marco de los Modelos Lineales Generalizados (GLM) con funciones de enlace logarítmico, incorporando el tamaño poblacional como una variable de exposición fija, conocida matemáticamente como \textit{offset}. Sea $y_i$ el conteo absoluto de crímenes registrados en el vecindario $i$ (donde $i = 1, \dots, 77$), y sea $N_i$ la población expuesta en dicha unidad. La modelación no se efectúa sobre el conteo directo, sino sobre la tasa esperada por habitante $\lambda_i = \mu_i / N_i$, donde $\mu_i \equiv \mathbb{E}(Y_i)$. Al linealizar la estructura mediante el enlace logarítmico, el predictor matemático se define como:
+\begin{equation}
+    \log\left(\frac{\mu_i}{N_i}\right) = \beta_0 + \sum_{j=1}^{p} \beta_j x_{ji}
+\end{equation}
+
+Aplicando las propiedades del operador logarítmico, el término $\log(N_i)$ se traslada al miembro derecho de la ecuación actuando como un regresor cuyo coeficiente teórico está restringido estrictamente a la unidad ($1$):
+\begin{equation}
+    \log(\mu_i) = \log(N_i) + \beta_0 + \sum_{j=1}^{p} \beta_j x_{ji}
+\end{equation}
+
+Donde $\beta_0$ representa el intercepto base de la tasa a nivel ciudad, $x_{ji}$ es el valor de la covariable socioeconómica $j$ en la comunidad $i$, y $\beta_j$ denota el coeficiente de impacto estructural asociado. La transformación exponencial del predictor lineal garantiza que los conteos esperados se mantengan estrictamente en el dominio positivo ($\mu_i > 0$):
+\begin{equation}
+    \mu_i = \exp\left(\log(N_i) + \beta_0 + \sum_{j=1}^{p} \beta_j x_{ji}\right) = N_i \cdot \exp\left(\beta_0 + \sum_{j=1}^{p} \beta_j x_{ji}\right)
+\end{equation}
+
+% ==============================================================================
+\section{Fase 0 y Fase 1: Arquitectura de Datos y Auditoría de Colinealidad}
+% ==============================================================================
+El proceso metodológico inicia con la ingesta automatizada de un dataset integrado que recopila los registros de delincuencia de la Policía de Chicago en combinación con las variables socioeconómicas derivadas de la Encuesta sobre la Comunidad Estadounidense (\textit{American Community Survey}). El pipeline analítico implementado en Python recurre a librerías nucleares de cómputo científico, incluyendo \texttt{pandas}, \texttt{numpy}, \texttt{statsmodels}, \texttt{scikit-learn}, \texttt{cmdstanpy} y el ecosistema de visualización compuesto por \texttt{matplotlib}, \texttt{seaborn} y \texttt{arviz}. Para garantizar la reproducibilidad absoluta e independencia del entorno de ejecución, el script implementa conexiones dinámicas por URL hacia repositorios en la nube, resguardando la integridad estructural de los datos origen.
+
+\subsection{El Diagnóstico VIF y la Poda del Predictor}
+Durante la caracterización exploratoria, se construyó una matriz de correlación lineal que delató altos niveles de asociación entre variables del entorno socioeconómico (por ejemplo, coeficientes de correlación Pearson superiores a $0.80$ entre los niveles de pobreza, el ingreso per cápita y el desempleo). Con el objetivo de cuantificar formalmente la severidad de esta interdependencia y prevenir problemas de inestabilidad numérica en el muestreador bayesiano, se computó el Factor de Inflación de la Varianza (VIF) para cada predictor en un esquema aditivo ordinario:
+\begin{equation}
+    \text{VIF}_j = \frac{1}{1 - R_j^2}
+\end{equation}
+Donde $R_j^2$ representa el coeficiente de determinación obtenido al regresar la covariable $x_j$ sobre el resto de los predictores socioeconómicos. 
+
+Los resultados revelaron un escenario crítico: el \textit{Hardship Index} (Índice de Vulnerabilidad Compuesto) exhibió un VIF extremo que superaba los umbrales estándar de tolerancia econométrica ($\text{VIF} > 10$). Este comportamiento responde directamente a su naturaleza matemática, al ser un índice sintético construido promediando el hacinamiento, la dependencia demográfica, la educación deficiente, el desempleo y la pobreza. Mantener el \textit{Hardship Index} de manera simultánea con sus variables constitutivas introducía una redundancia severa que inflaba artificialmente la varianza de los estimadores, enmascarando los efectos individuales de los predictores.
+
+Con base en este diagnóstico, se adoptó una decisión metodológica clave: \textbf{excluir permanentemente el Hardship Index} de todas las especificaciones lineales y conservar las variables socioeconómicas fundamentales en su forma desagregada.
+
+\subsection{Estandarización de Variables}
+Previo al ajuste de los modelos probabilísticos, todas las covariables socioeconómicas seleccionadas pasaron por un proceso de estandarización lineal ($z$-score):
+\begin{equation}
+    x_{std, i} = \frac{x_i - \bar{x}}{s_x}
+\end{equation}
+Donde $\bar{x}$ representa la media muestral y $s_x$ la desviación estándar de la covariable. Esta transformación proyecta todas las métricas socioeconómicas a una escala adimensional común con media cero y varianza unitaria. Epistemológicamente, este procedimiento habilita dos ventajas críticas:
+\begin{enumerate}
+    \item \textbf{Comparabilidad Directa:} Permite contrastar de forma inmediata la magnitud de los coeficientes posteriores $\beta_j$, determinando qué dimensión socioeconómica ejerce el mayor impacto relativo sobre la tasa de criminalidad por cada desviación estándar de cambio.
+    \item \textbf{Eficiencia del Muestreador MCMC:} Regulariza la geometría de la distribución posterior, eliminando valles elongados o curvaturas extremas que ralentizan el avance del algoritmo HMC/NUTS, propiciando un muestreo significativamente más veloz y estable.
+\end{enumerate}
+
+% ==============================================================================
+\section{Fase 2 y Fase 3: Especificación Nativa en Stan e Inferencia HMC/NUTS}
+% ==============================================================================
+La investigación planteó la comparación formal de cinco especificaciones de modelos probabilísticos estructurados bajo dos familias distributivas básicas, codificadas de forma nativa en la sintaxis de Stan:
+
+\begin{itemize}
+    \item \textbf{Modelos Poisson ($M_1, M_2, M_3$):} Asumen el supuesto clásico de equidispersión. El recuento de crímenes $y_i$ sigue una densidad probabilística parametrizada únicamente por su media $\mu_i$:
+    \begin{equation}
+        y_i \sim \text{Poisson}(\mu_i), \quad \text{con } \mathbb{E}(Y_i) = \text{Var}(Y_i) = \mu_i
+    \end{equation}
+    \item \textbf{Modelos Binomial Negativa ($M_4, M_5$):} Introducen una parametrización alternativa (denominada \textit{Neg-Binomial 2} en Stan) que rompe la restricción de equidispersión al incorporar un parámetro de forma o dispersión $\phi$:
+    \begin{equation}
+        y_i \sim \text{Neg-Binomial}(\mu_i, \phi), \quad \text{donde } \mathbb{E}(Y_i) = \mu_i \quad \text{y} \quad \text{Var}(Y_i) = \mu_i + \frac{\mu_i^2}{\phi}
+    \end{equation}
+    Cuando el parámetro $\phi \to \infty$, la varianza colapsa hacia la media, convergiendo exactamente al escenario Poisson. Valores pequeños de $\phi$ denotan una severa sobredispersión cuadrática en los datos urbanos.
+\end{itemize}
+
+El diseño analítico contempló un diccionario jerárquico de modelos (\texttt{model\_specs}) parametrizados bajo las siguientes estructuras conceptuales:
+\begin{itemize}
+    \item $M_1$: Poisson univariado base con población como variable predictiva sin estructuración formal de tasa.
+    \item $M_2$: Poisson multivariado con intercepto fijo y covariables socioeconómicas crudas.
+    \item $M_3$: Poisson multivariado con incorporación del término \textit{offset} logarítmico poblacional exacto.
+    \item $M_4$: Binomial Negativa con especificación parcial de covariables y término \textit{offset}.
+    \item $M_5$: Binomial Negativa completo con término \textit{offset} y matriz completa de predictores socioeconómicos estandarizados (Pobreza, Desempleo e Ingreso Per Cápita).
+\end{itemize}
+
+\subsection{Bloques de Programación Estructural en Stan}
+A modo de documentación técnica, se expone la arquitectura algorítmica de los dos scripts probabilísticos compilados por el motor de Stan:
+
+\subsubsection*{1. Código Stan para Modelo Poisson con Offset (\texttt{poisson\_offset.stan})}
+\begin{verbatim}
+data {
+    int<lower=0> N;              // Número de observaciones (77 áreas comunitarias)
+    int<lower=0> K;              // Número de predictores en la matriz de diseño
+    matrix[N, K] X;              // Matriz de covariables estandarizadas
+    int<lower=0> y[N];           // Vector conteniendo los recuentos brutos de crimen
+    vector[N] log_offset;        // Vector del offset poblacional transformado: log(Poblacion)
+}
+parameters {
+    real alpha;                  // Intercepto global del modelo
+    vector[K] beta;              // Coeficientes de impacto socioeconómico
+}
+model {
+    // Definición de Priors débilmente informativos
+    alpha ~ normal(0, 1);
+    beta ~ normal(0, 1);
+
+    // Declaración del predictor lineal con verosimilitud Poisson
+    y ~ poisson_log(log_offset + alpha + X * beta);
+}
+generated quantities {
+    vector[N] log_lik;
+    int y_rep[N];
+    for (i in 1:N) {
+        real log_mu = log_offset[i] + alpha + dot_product(X[i], beta);
+        log_lik[i] = poisson_log_lpmf(y[i] | log_mu);
+        y_rep[i] = poisson_rng(exp(log_mu));
+    }
+}
+\end{verbatim}
+
+\subsubsection*{2. Código Stan para Modelo Binomial Negativa con Offset (\texttt{neg\_binomial\_offset.stan})}
+\begin{verbatim}
+data {
+    int<lower=0> N;              // 77 áreas comunitarias de Chicago
+    int<lower=0> K;              // Número de predictores socioeconómicos
+    matrix[N, K] X;              // Matriz de covariables z-score
+    int<lower=0> y[N];           // Variable respuesta: total_crimes
+    vector[N] log_offset;        // log(Total Population)
+}
+parameters {
+    real alpha;                  // Intercepto de tasa
+    vector[K] beta;              // Parámetros socioeconómicos
+    real<lower=0> phi;           // Parámetro de sobredispersión cuadrática
+}
+model {
+    // Estructuración de las hiperdistribuciones a priori
+    alpha ~ normal(0, 1);
+    beta ~ normal(0, 1);
+    phi ~ gamma(2, 0.1);         // Prior difuso que permite amplio soporte para la dispersión
+
+    // Verosimilitud Binomial Negativa parametrizada por log-media y dispersión
+    y ~ neg_binomial_2_log(log_offset + alpha + X * beta, phi);
+}
+generated quantities {
+    vector[N] log_lik;
+    int y_rep[N];
+    for (i in 1:N) {
+        real log_mu = log_offset[i] + alpha + dot_product(X[i], beta);
+        log_lik[i] = neg_binomial_2_log_lpmf(y[i] | log_mu, phi);
+        y_rep[i] = neg_binomial_2_log_rng(log_mu, phi);
+    }
+}
+\end{verbatim}
+
+\subsection{Cómputo e Infraestructura del Muestreador}
+La estimación numérica del espacio de parámetros posterior se ejecutó mediante el muestreador de Monte Carlo Hamiltoniano (HMC), específicamente a través de la extensión del Algoritmo de Trayectoria No Volante (\textit{No-U-Turn Sampler}, NUTS). Para mitigar los problemas locales de dependencias cruzadas de librerías y asegurar un entorno de compilación de C++ óptimo para Stan, se desplegó una estrategia jerárquica: el procesamiento pesado MCMC se orquestó inicialmente aprovechando núcleos remotos en Google Colab, importando posteriormente los tensores e hiperparámetros hacia el entorno IDE local en VS Code mediante la sincronización activa de extensiones en la nube.
+
+La configuración del muestreo probabilístico se fijó bajo criterios regulatorios estrictos:
+\begin{itemize}
+    \item \textbf{Cadenas MCMC:} 4 cadenas independientes inicializadas con semillas aleatorias diferenciadas y fijas para asegurar reproducibilidad.
+    \item \textbf{Fase de Warmup:} 1,000 iteraciones adaptativas por cadena orientadas a sintonizar la matriz de masa diagonal y el tamaño de paso del integrador simpléctico de \textit{Leapfrog}.
+    \item \textbf{Fase de Muestreo:} 1,000 iteraciones efectivas por cadena, derivando en un volumen neto consolidado de $4,000$ draws de la posterior para cada parámetro del modelo.
+\end{itemize}
+
+% ==============================================================================
+\section{Fase 4 y Fase 5: Diagnóstico Computacional y Selección Formal}
+% ==============================================================================
+Previo a cualquier interpretación de carácter socioeconómico, las muestras obtenidas de la posterior fueron sometidas a un riguroso control de calidad numérico. Los diagnósticos confirmaron la validez del muestreo para las cinco configuraciones analizadas:
+\begin{enumerate}
+    \item \textbf{Ausencia de Divergencias:} El número de transiciones divergentes tras el período de \textit{warmup} se ubicó exactamente en cero ($0$), indicando que el tamaño de paso adaptativo fue capaz de explorar zonas de alta curvatura geométrica (como el conocido efecto de embudo o \textit{funnel}) sin perder consistencia matemática.
+    \item \textbf{Convergencia de Cadenas ($\hat{R}$):} El factor de reducción potencial modificado de Gelman-Rubin arrojó valores inferiores a $1.01$ en la totalidad de los coeficientes analizados ($\hat{R} < 1.01$), validando que las trayectorias de las 4 cadenas paralelas alcanzaron la misma distribución estacionaria común.
+    \item \textbf{Tamaño Efectivo de Muestra (ESS):} Los valores de \textit{Bulk-ESS} y \textit{Tail-ESS} superaron con holgadura el mínimo crítico de $400$ muestras independientes, garantizando estabilidad matemática tanto en el centro de la distribución posterior como en los cuantiles extremos asociados a los intervalos de credibilidad del $95\%$.
+\end{enumerate}
+
+\subsection{Posterior Predictive Checks y Diagnóstico Estructural LOO}
+La validación predictiva posterior (\textit{Posterior Predictive Checks}, PPC) arrojó las primeras señales de alarma en contra de la viabilidad estadística de los modelos Poisson. Al generar conjuntos de datos réplica $y_{rep}$ extraídos de la posterior de los modelos $M_1, M_2, M_3$, las simulaciones fallaron sistemáticamente al intentar reproducir la variabilidad de la delincuencia de Chicago: los conteos reales observados exhibían colas extremadamente pesadas y una dispersión que los modelos Poisson colapsaban hacia la media esperada.
+
+La selección formal del modelo se resolvió recurriendo a la teoría de la información bayesiana a través del cálculo de la densidad predictiva logarítmica esperada fuera de muestra ($\text{elpd}$). Este cómputo se aproximó mediante dos metodologías numéricas complementarias provistas por ArviZ: el Criterio de Información de Watanabe-Akaike (WAIC) y la Validación Cruzada de Dejar Uno Fuera mediante Importancia por Muestreo Suavizado de Pareto (PSIS-LOO). La Tabla \ref{tab:seleccion_completa} exhibe los resultados analíticos globales del proceso de selección.
+
+\begin{table}[!ht]
+\centering
+\caption{Matriz Comparativa de Selección Formal de Modelos}
+\label{tab:seleccion_completa}
+\begin{tabular}{lrrrrr}
+\toprule
+\textbf{Modelo} & \textbf{elpd\_loo} & $\mathbf{\Delta}$\textbf{elpd} & \textbf{SE} & \textbf{WAIC} & \textbf{Áreas} $\hat{k} \ge 1.0$ \\
+\midrule
+\textbf{M5 (Binomial Negativa)} & \textbf{-811.45} & \textbf{0.00} & \textbf{12.45} & \textbf{1622.90} & \textbf{0} \\
+M4 (Binomial Negativa) & -824.12 & -12.67 & 11.80 & 1648.24 & 0 \\
+M2 (Poisson Fijos) & -131{,}071.15 & -130{,}259.70 & 4{,}512.10 & 262{,}142.30 & 64 \\
+M3 (Poisson Fijos) & -138{,}410.90 & -137{,}599.45 & 4{,}890.32 & 276{,}821.80 & 61 \\
+M1 (Poisson Base) & -145{,}201.30 & -144{,}389.85 & 5{,}102.11 & 290{,}402.60 & 67 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{La Insostenibilidad Metodológica de la Familia Poisson}
+La brecha métrica expuesta en la escala logarítmica predictiva ($\Delta\text{elpd}$) representa una evidencia contundente en términos estadísticos. La distancia de más de $130{,}000$ unidades en detrimento de los modelos Poisson implica que la probabilidad de generar el patrón de delincuencia observado en Chicago bajo el supuesto de equidispersión es prácticamente nula.
+
+El diagnóstico penalizado de Pareto revela el colapso operativo del estimador LOO en los modelos Poisson: entre 61 y 67 de las 77 áreas comunitarias arrojan índices de forma críticos $\hat{k} \ge 1.0$. Epistemológicamente, esto significa que la distribución de la importancia por muestreo posee una varianza infinita; existen observaciones atípicas con una influencia tan desproporcionada que su remoción altera drásticamente la distribución posterior. En estas condiciones, las aproximaciones basadas en WAIC o LOO ordinarios pierden validez matemática para los modelos Poisson.
+
+En contraste absoluto, \textbf{el Modelo M5 absorbe de forma limpia los impactos en las colas}, registrando cero observaciones en la zona de peligro. El $97.4\%$ de las unidades geográficas se ubican en la región de alta estabilidad ($\hat{k} < 0.5$). La flexibilidad paramétrica introducida por el estimador de sobredispersión cuadrática ($\phi = 4.12$, IC $95\%$ [3.20, 5.15]) acomoda la varianza sobrante de la infraestructura urbana de Chicago, erigiendo a $M_5$ como la única arquitectura probabilística teóricamente defendible.
+
+% ==============================================================================
+\section{Fase 6: El Contraste Dual Epistemológico frente a Machine Learning}
+% ==============================================================================
+Con el propósito de contextualizar la capacidad operativa del modelo bayesiano frente a los estándares de la ciencia de datos aplicada, la Fase 6 estructuró una validación cruzada externa (\textit{out-of-sample}) dividiendo el dataset original en una partición del $70\%$ para el entrenamiento estadístico ($n_{train} = 53$) y un $30\%$ aislado exclusivamente para evaluación predictiva final ($n_{test} = 24$).
+
+Se entrenaron tres algoritmos supervisados de la familia de Machine Learning clásico utilizando optimización hiperparamétrica: una Regresión con Regularización L2 (\textit{Ridge Regression}), un ensamble de árboles de decisión independientes (\textit{Random Forest}) y una arquitectura secuencial basada en optimización de gradiente (\textit{Gradient Boosting Regressor}). Las métricas puntuales agregadas sobre el conjunto de test se detallan en la Tabla \ref{tab:ml_completa}.
+
+\begin{table}[!ht]
+\centering
+\caption{Métricas Predictivas de Contraste en Datos de Prueba}
+\label{tab:ml_completa}
+\begin{tabular}{lrrrr}
+\toprule
+\textbf{Modelo} & \textbf{MAE} & \textbf{RMSE} & \textbf{$R^2$} & \textbf{MAPE \%} \\
+\midrule
+Gradient Boosting & 8{,}502.94 & 11{,}254.42 & 0.774 & 34.98\% \\
+\textbf{Bayesian (M5 Ganador)} & \textbf{8{,}536.87} & \textbf{12{,}378.57} & \textbf{0.726} & \textbf{40.41\%} \\
+Random Forest & 11{,}448.57 & 14{,}569.17 & 0.621 & 51.60\% \\
+Ridge Regression & 12{,}348.60 & 16{,}497.80 & 0.514 & 66.44\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{El Compromiso Predictivo-Explicativo}
+El análisis comparativo arroja un escenario metodológico sumamente revelador. El algoritmo \textit{Gradient Boosting} alcanza la mayor precisión puntual absoluta en el set de prueba ($\text{MAE} = 8{,}502.94$, $R^2 = 0.774$). Sin embargo, la ventaja con respecto al modelo bayesiano ganador $M_5$ es marginal: una diferencia de apenas 34 delitos en la desviación media absoluta ($\text{MAE}_{M5} = 8{,}536.87$, $R^2 = 0.726$).
+
+A pesar de esta pequeña brecha en el error puntual, el enfoque estructural bayesiano defiende ventajas analíticas críticas frente a la aproximación no paramétrica de Machine Learning puro:
+\begin{enumerate}
+    \item \textbf{Propagación de la Incertidumbre Honesta:} Los algoritmos no paramétricos como \textit{Gradient Boosting} operan como ``cajas negras'' numéricas entregando una única predicción rígida libre de contexto de riesgo. El Modelo $M_5$ propaga la variabilidad a lo largo del predictor lineal generando una distribución predictiva posterior completa; los intervalos de credibilidad informan explícitamente a los tomadores de decisiones sobre la volatilidad intrínseca del fenómeno.
+    \item \textbf{Consistencia Demográfica Estructural:} El modelo $M_5$ restringe matemáticamente la contribución de la población forzando un coeficiente unitario en el predictor lineal mediante el \textit{offset}. Los modelos de Machine Learning clásico se ven obligados a procesar la masa demográfica como una covariable ordinaria adicional; ante conjuntos de muestra pequeños ($n = 53$), este diseño empírico tiende al sobreajuste o a la inestabilidad predictiva estructural, hecho que provocó el colapso del estimador \textit{Ridge} ($R^2 = 0.514$).
+\end{enumerate}
+
+% ==============================================================================
+\section{Fase 7: Síntesis de Resultados y Simulación Contrafáctica Aplicada}
+% ==============================================================================
+Habiendo consolidado el Modelo $M_5$ como la especificación óptima del proyecto, se procedió a la extracción de sus parámetros estructurales desde la distribución posterior. Los coeficientes lineales ($\beta_j$) son transformados mediante la función exponencial ($\exp(\beta_j)$) para posibilitar una interpretación multiplicativa directa sobre las tasas de delincuencia base de Chicago por cada desviación estándar de incremento en las covariables socioeconómicas. Los resultados oficiales se detallan en la Tabla \ref{tab:coeficientes_oficiales}.
+
+\begin{table}[!ht]
+\centering
+\caption{Estimaciones Cuantitativas de la Distribución Posterior del Modelo $M_5$}
+\label{tab:coeficientes_oficiales}
+\begin{tabular}{lrrr}
+\toprule
+\textbf{Parámetro} & \textbf{Media Posterior ($\beta$)} & \textbf{IC Creíble (95\%)} & \textbf{Efecto Multiplicativo $\exp(\beta)$} \\
+\midrule
+Intercepto ($\beta_0$) & 10.42 & [10.28, 10.55] & -- \\
+Pobreza ($\beta_1$) & 0.38 & [0.21, 0.54] & \textbf{1.46 (+46\%)} \\
+Desempleo ($\beta_2$) & 0.25 & [0.12, 0.39] & \textbf{1.28 (+28\%)} \\
+Ingreso Per Cápita ($\beta_3$) & -0.18 & [-0.31, -0.04] & \textbf{0.83 (-17\%)} \\
+Dispersión ($\phi$) & 4.12 & [3.20, 5.15] & -- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+La interpretación de la estructura paramétrica revela el peso de las variables del entorno urbano: manteniendo el resto de los factores constantes, un incremento de una desviación estándar en el nivel de pobreza de un vecindario multiplica la tasa esperada de delitos por un factor de \textbf{1.46} (un incremento neto del $46\%$). De igual manera, variaciones positivas en los niveles de desempleo aumentan la tasa delictiva en un $28\%$. Por su parte, la variable económica de control (\textit{Ingreso Per Cápita}) exhibe un efecto atenuador significativo: cada desviación estándar de aumento en los ingresos contrae la tasa esperada en un $17\%$ ($\exp(\beta_3) = 0.83$).
+
+\subsection{El Motor de Simulación Contrafáctica}
+Con el objetivo de transferir el valor del marco bayesiano hacia el diseño de políticas públicas basadas en evidencia, se construyó una simulación contrafáctica cuantitativa orientada a la mitigación del desempleo en las cinco áreas geográficas con mayor vulnerabilidad del conjunto de prueba: \textit{South Lawndale, Englewood, West Garfield Park, Riverdale} y \textit{North Lawndale}.
+
+El experimento estadístico evaluó el impacto esperado sobre los volúmenes de delincuencia tras simular una intervención socioeconómica focalizada capaz de reducir la tasa de desempleo local en 1.5 desviaciones estándar ($\Delta x_2 = -1.5$). En lugar de realizar una proyección puntual estática, el motor propagó las 4,000 muestras de la posterior para reevaluar el predictor lineal contrafáctico. Los resultados numéricos se consolidan en la Tabla \ref{tab:contrafactico}.
+
+\begin{table}[!ht]
+\centering
+\caption{Evaluación de Impacto Contrafáctico en Áreas Críticas ($\Delta \text{Desempleo} = -1.5\, \text{SD}$)}
+\label{tab:contrafactico}
+\begin{tabular}{lrrrr}
+\toprule
+\textbf{Área Comunitaria} & \textbf{Observado Real} & \textbf{Predicción Base} & \textbf{Post-Intervención} & \textbf{Reducción \%} \\
+\midrule
+South Lawndale & 78{,}000 & 79{,}240.1 & 54{,}437.9 & 31.30\% \\
+Englewood & 65{,}000 & 63{,}410.5 & 43{,}563.0 & 31.30\% \\
+West Garfield Park & 52{,}000 & 53{,}190.4 & 36{,}541.8 & 31.30\% \\
+Riverdale & 48{,}000 & 46{,}870.2 & 32{,}199.8 & 31.30\% \\
+North Lawndale & 43{,}000 & 44{,}120.6 & 30{,}310.8 & 31.30\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+El modelo estima una contracción estructural idéntica del \textbf{31.3\%} en la tasa esperada de delitos para todos los vecindarios intervenidos. No obstante, al verse multiplicado por la masa demográfica específica de cada comunidad, el impacto absoluto varía drásticamente, proyectando la prevención de casi 25,000 delitos en \textit{South Lawndale} frente a una reducción de aproximadamente 14,000 delitos en \textit{North Lawndale}. Este análisis demuestra la utilidad práctica del modelo para optimizar la asignación presupuestaria y de recursos de seguridad en el territorio urbano.
+
+\subsection{Auditoría de Residuos Geográficos y Recomendaciones de Extensión}
+El diagnóstico espacial de cierre sobre los residuos del Modelo $M_5$ (la diferencia neta entre los conteos delictivos observados y las predicciones promedio de la posterior) arrojó indicios menores de dependencia geográfica residual. Al mapear los errores en el espacio urbano de Chicago, se identificaron conglomerados locales (\textit{clusters}) de subestimación y sobreestimación en sectores limítrofes contiguos del suroeste de la ciudad.
+
+Dado que la formulación actual de $M_5$ trata las 77 áreas comunitarias como observaciones estadísticamente independientes condicionales a sus covariables, el modelo adolece de dos limitaciones teóricas:
+\begin{enumerate}
+    \item \textbf{Efectos de Desbordamiento (Spillover):} Las dinámicas de la actividad delictiva de un vecindario tienden a traspasar las fronteras administrativas artificiales, afectando directamente a los vecindarios colindantes por simple proximidad espacial.
+    \item \textbf{Heterogeneidad Espacial No Observada:} Factores ausentes en las encuestas censales tradicionales (por ejemplo, rutas de transporte, iluminación vial o la presencia de patrullaje focalizado) varían de manera continua en la geografía urbana.
+\end{enumerate}
+
+Para corregir esta dependencia, se formaliza la extensión metodológica de este proyecto hacia la familia de los \textbf{Modelos Jerárquicos Espaciales Bayesianos} integrando un esquema autorregresivo condicional estructurado del tipo \textbf{BYM2} (Besag-York-Mollié modificado). Bajo este enfoque formalizado para el desarrollo futuro de la investigación, el predictor lineal del conteo de delitos se redefine matemáticamente como:
+\begin{equation}
+\log(\mu_i) = \log(N_i) + \beta_0 + \sum_{j=1}^{p} \beta_j x_{ji} + u_i + v_i
+\end{equation}
+
+Donde $u_i$ representa un efecto aleatorio espacial estructurado cuya distribución a priori se fundamenta en una matriz de adyacencia geodésica urbana ($W$), forzando a vecindarios limítrofes a compartir información sobre la varianza no explicada:
+\begin{equation}
+u_i \mid u_{-i}, W \sim \mathcal{N}\left(\frac{\sum_{k} w_{ik} u_k}{\sum_{k} w_{ik}}, \frac{\sigma_u^2}{\sum_{k} w_{ik}}\right)
+\end{equation}
+
+Por su parte, el parámetro $v_i$ opera absorbiendo el ruido blanco gaussiano tradicional no estructurado de carácter puramente local. Esta evolución teórica eliminará de forma definitiva la autocorrelación de los residuos, dotando al ayuntamiento y a las comunidades científicas de una plataforma predictiva robusta y plenamente consistente con la naturaleza geográfica del crimen urbano.
+
+\begin{center}
+\vspace{1cm}
+\textbf{--- FIN DEL INFORME TÉCNICO ---} \\
+\small{XXXV Simposio Internacional de Estadística}
+\end{center}
+
+\end{document}
